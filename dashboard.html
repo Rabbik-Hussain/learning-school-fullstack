@@ -50,6 +50,14 @@
             <div class="flex space-x-6 items-center">
                 <button onclick="showSection('home')" class="hover:text-yellow-400 font-semibold">হোম</button>
                 <button onclick="showSection('info')" class="hover:text-yellow-400 font-semibold">ইনফরমেশন</button>
+                <button
+    id="approvalMenuButton"
+    onclick="showSection('approval')"
+    class="hover:text-yellow-400 font-semibold"
+    style="display: none;"
+>
+    Approval Requests
+</button>
                 <button onclick="showSection('dashboard')" class="bg-yellow-500 text-blue-900 px-4 py-1.5 rounded-lg font-bold hover:bg-yellow-400 transition">ক্যাশ কাউন্ট</button>
                 <button onclick="logoutFromDashboard()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg font-bold text-sm transition">লগ আউট</button>
             </div>
@@ -551,9 +559,47 @@
         </button>
     </div>
 
+    <!-- DIRECTOR INFORMATION -->
+<div id="directorsInformationSection" class="space-y-4">
+
+    <div class="border-b pb-3">
+        <h3 class="text-xl font-bold text-blue-900">
+            পরিচালকের তথ্য (Director Information)
+        </h3>
+    </div>
+
+    <div id="directorsInformationContainer" class="space-y-4">
+        <!-- JS will render Director cards here -->
+    </div>
+
+</div>
+
     <div id="teachersInformationContainer" class="space-y-4">
         <!-- JS will render full-width cards here -->
     </div>
+</section>
+
+<!-- ADMIN APPROVAL REQUESTS -->
+<section
+    id="sec-approval"
+    class="hidden bg-white p-8 rounded-xl shadow-md no-print space-y-6"
+>
+
+    <div class="border-b pb-3">
+        <h2 class="text-2xl font-bold text-blue-900">
+            অনুমোদন অনুরোধ (Approval Requests)
+        </h2>
+    </div>
+
+    <div
+        id="approvalRequestsContainer"
+        class="space-y-4"
+    >
+        <p class="text-center text-gray-500 text-sm">
+            Approval requests লোড হচ্ছে...
+        </p>
+    </div>
+
 </section>
 
 <!-- REMOVE TEACHER MODAL -->
@@ -635,6 +681,92 @@
                 class="bg-red-600 text-white px-4 py-2 rounded font-bold text-sm hover:bg-red-700"
             >
                 Remove Teacher
+            </button>
+
+        </div>
+    </div>
+</div>
+
+
+<!-- REMOVE DIRECTOR MODAL -->
+<div
+    id="removeDirectorModal"
+    class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+>
+    <div class="bg-white rounded-xl p-6 max-w-md w-full space-y-4 shadow-xl">
+
+        <div class="border-b pb-2">
+            <h3 class="font-bold text-lg text-red-600">
+                পরিচালক রিমুভ করুন
+            </h3>
+
+            <p class="text-xs text-gray-500 mt-1">
+                Director ID এবং সঠিক Password প্রদান করলে পরিচালককে
+                Remove করার অনুরোধ Admin-এর কাছে যাবে।
+            </p>
+        </div>
+
+        <div>
+            <label
+                for="removeDirectorId"
+                class="block text-sm font-bold text-gray-700 mb-1"
+            >
+                Director ID
+            </label>
+
+            <input
+                type="text"
+                id="removeDirectorId"
+                placeholder="Director ID লিখুন"
+                autocomplete="off"
+                class="w-full border p-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+        </div>
+
+        <div>
+            <label
+                for="removeDirectorPassword"
+                class="block text-sm font-bold text-gray-700 mb-1"
+            >
+                Director Password
+            </label>
+
+            <div class="relative">
+                <input
+                    type="password"
+                    id="removeDirectorPassword"
+                    placeholder="Director Password লিখুন"
+                    autocomplete="off"
+                    class="w-full border p-2 pr-10 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+
+                <button
+                    type="button"
+                    onclick="togglePasswordVisibility('removeDirectorPassword', this)"
+                    class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600"
+                    aria-label="Show or hide password"
+                >
+                    <i class="fa-solid fa-eye"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="flex justify-end space-x-2 pt-2">
+
+            <button
+                type="button"
+                onclick="closeRemoveDirectorModal()"
+                class="bg-gray-400 text-white px-4 py-2 rounded text-sm hover:bg-gray-500"
+            >
+                বাতিল
+            </button>
+
+            <button
+                type="button"
+                onclick="removeDirectorAccount()"
+                class="bg-red-600 text-white px-4 py-2 rounded font-bold text-sm hover:bg-red-700"
+            >
+                পরিচালক রিমুভ
             </button>
 
         </div>

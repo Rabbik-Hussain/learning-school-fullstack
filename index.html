@@ -24,7 +24,7 @@
 
       <form id="loginFormElement">
         <div class="input-group">
-          <input type="text" id="loginTeacherId" placeholder="Teacher ID" required>
+          <input type="text" id="loginTeacherId" placeholder="Director ID / Teacher ID" required>
           <i class="fa-solid fa-id-badge" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #555;"></i>
         </div>
 
@@ -60,7 +60,7 @@
         <!-- Teacher ID -->
         <div class="icon-input">
           <i class="fa-solid fa-id-badge"></i>
-          <input type="text" id="regTeacherId" placeholder="Teacher ID" required>
+          <input type="text" id="regTeacherId" placeholder="Director ID / Teacher ID" required>
         </div>
 
         <!-- Password -->
@@ -94,6 +94,7 @@
           <i class="fa-solid fa-briefcase"></i>
           <select id="designationSelect" onchange="toggleClassField()" required style="color: #666;">
             <option value="" disabled selected>Select Designation</option>
+            <option value="director">পরিচালক (Director)</option>
             <option value="head_teacher">প্রধান শিক্ষক (Head Teacher)</option>
             <option value="assistant_teacher">সহকারী শিক্ষক (Assistant Teacher)</option>
             <option value="class_teacher">শ্রেণি শিক্ষক (Class Teacher)</option>

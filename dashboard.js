@@ -1052,7 +1052,281 @@ document.addEventListener(
 );
 
 
+async function loadApprovalRequests() {
+
+    const container =
+        document.getElementById('approvalRequestsContainer');
+
+    if (!container) return;
+
+    const token =
+        localStorage.getItem('LS_ACCESS_TOKEN');
+
+    if (!token) {
+        container.innerHTML = `
+            <p class="text-center text-red-500 text-sm">
+                Login required.
+            </p>
+        `;
+        return;
+    }
+
+    container.innerHTML = `
+        <p class="text-center text-gray-500 text-sm">
+            Approval requests লোড হচ্ছে...
+        </p>
+    `;
+
+    try {
+
+        const response = await fetch(
+            `http://127.0.0.1:8000/auth/approval-requests?token=${encodeURIComponent(token)}`
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail || 'Approval requests loading failed.'
+            );
+        }
+
+        if (data.message) {
+            container.innerHTML = `
+                <p class="text-center text-red-500 text-sm">
+                    ${data.message}
+                </p>
+            `;
+            return;
+        }
+
+        const requests = data.requests || [];
+
+        if (requests.length === 0) {
+
+            container.innerHTML = `
+                <p class="text-center text-gray-500 text-sm">
+                    বর্তমানে কোনো Pending Approval Request নেই।
+                </p>
+            `;
+
+            return;
+        }
+
+        container.innerHTML = '';
+
+        requests.forEach(request => {
+
+            const card =
+                document.createElement('div');
+
+            card.className =
+                "w-full bg-white border border-gray-300 rounded-xl shadow-md p-5";
+
+            let requestTypeText = '';
+
+            if (request.request_type === 'registration') {
+
+                requestTypeText =
+                    'নতুন নিবন্ধন (Registration)';
+
+            } else if (
+                request.request_type === 'teacher_removal'
+            ) {
+
+                requestTypeText =
+                    'শিক্ষক রিমুভ (Teacher Removal)';
+
+            } else if (
+                request.request_type === 'director_removal'
+            ) {
+
+                requestTypeText =
+                    'পরিচালক রিমুভ (Director Removal)';
+
+            } else {
+
+                requestTypeText =
+                    request.request_type || 'Unknown Request';
+            }
+
+            let designationText = '';
+
+            if (request.designation === 'head_teacher') {
+
+                designationText =
+                    'প্রধান শিক্ষক (Head Teacher)';
+
+            } else if (
+                request.designation === 'assistant_teacher'
+            ) {
+
+                designationText =
+                    'সহকারী শিক্ষক (Assistant Teacher)';
+
+            } else if (
+                request.designation === 'class_teacher'
+            ) {
+
+                designationText =
+                    'শ্রেণি শিক্ষক (Class Teacher)';
+
+            } else if (
+                request.designation === 'director'
+            ) {
+
+                designationText =
+                    'পরিচালক (Director)';
+
+            } else {
+
+                designationText =
+                    request.designation || '';
+            }
+
+            card.innerHTML = `
+                <div class="space-y-2">
+
+                    <h3 class="text-lg font-bold text-blue-900">
+                        ${request.first_name || ''}
+                        ${request.last_name || ''}
+                    </h3>
+
+                    <p class="text-sm text-gray-700">
+                        <strong>ID:</strong>
+                        ${request.teacher_id || ''}
+                    </p>
+
+                    <p class="text-sm text-gray-700">
+                        <strong>পদবি:</strong>
+                        ${designationText}
+                    </p>
+
+                    <p class="text-sm text-gray-700">
+                        <strong>অনুরোধ:</strong>
+                        ${requestTypeText}
+                    </p>
+
+                    <p class="text-xs text-gray-500">
+                        <strong>Status:</strong>
+                        Pending
+                    </p>
+
+                </div>
+
+                <div class="flex gap-3 mt-5">
+
+                    <button
+                        type="button"
+                        onclick="handleApprovalRequest(${request.request_id}, 'approve')"
+                        class="bg-green-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-green-700 transition"
+                    >
+                        Approve
+                    </button>
+
+                    <button
+                        type="button"
+                        onclick="handleApprovalRequest(${request.request_id}, 'reject')"
+                        class="bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-red-700 transition"
+                    >
+                        Reject
+                    </button>
+
+                </div>
+            `;
+
+            container.appendChild(card);
+        });
+
+    } catch (error) {
+
+        console.error(
+            'Approval requests loading error:',
+            error
+        );
+
+        container.innerHTML = `
+            <p class="text-center text-red-500 text-sm">
+                Approval requests লোড করা যাচ্ছে না।
+            </p>
+        `;
+    }
+}
+
+
+async function handleApprovalRequest(requestId, action) {
+
+    const token =
+        localStorage.getItem('LS_ACCESS_TOKEN');
+
+    if (!token) {
+        alert('Please login first.');
+        return;
+    }
+
+    const actionText =
+        action === 'approve'
+            ? 'Approve'
+            : 'Reject';
+
+    const confirmed =
+        confirm(
+            `আপনি কি এই request টি ${actionText} করতে চান?`
+        );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+
+        const response = await fetch(
+            `http://127.0.0.1:8000/auth/approve?token=${encodeURIComponent(token)}`,
+            {
+                method: 'POST',
+
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+
+                body: JSON.stringify({
+                    request_id: requestId,
+                    action: action
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail || 'Approval action failed.'
+            );
+        }
+
+        alert(
+            data.message ||
+            'Request processed successfully.'
+        );
+
+        await loadApprovalRequests();
+
+    } catch (error) {
+
+        console.error(
+            'Approval action error:',
+            error
+        );
+
+        alert(
+            'Request process করা যাচ্ছে না।'
+        );
+    }
+}
+
+
 function showSection(secId) {
+
     [
         'home',
         'info',
@@ -1061,29 +1335,52 @@ function showSection(secId) {
         'receiptform',
         'receiptpreview',
         'monthlybill',
-        'billpreview'
+        'billpreview',
+        'approval'
     ].forEach(s => {
-        const el = document.getElementById('sec-' + s);
-        if (el) el.classList.add('hidden');
+
+        const el =
+            document.getElementById('sec-' + s);
+
+        if (el) {
+            el.classList.add('hidden');
+        }
     });
 
     // Hide Today's Account internal view when changing main sections
-    const todayAccountView = document.getElementById('todayAccountView');
+    const todayAccountView =
+        document.getElementById('todayAccountView');
+
     if (todayAccountView) {
         todayAccountView.classList.add('hidden');
     }
 
-    const targetEl = document.getElementById('sec-' + secId);
-    if (targetEl) targetEl.classList.remove('hidden');
+    const targetEl =
+        document.getElementById('sec-' + secId);
+
+    if (targetEl) {
+        targetEl.classList.remove('hidden');
+    }
 
     if (secId === 'home') {
+
         loadClassFeeConfig();
+
     } else if (secId === 'info') {
+
         renderInformationTeachers();
+
     } else if (secId === 'receiptpreview') {
+
         populateReceiptSignatureDropdowns();
+
     } else if (secId === 'billpreview') {
+
         populateBillHeadTeacherDropdown();
+
+    } else if (secId === 'approval') {
+
+        loadApprovalRequests();
     }
 }
 
@@ -1832,95 +2129,367 @@ function isStudentIdUnique(studentId, excludeStudent = null) {
 // ==========================================
 // 3. INFORMATION PAGE: TEACHERS CARDS RENDER
 // ==========================================
-function renderInformationTeachers() {
-    const container = document.getElementById('teachersInformationContainer');
+async function renderInformationTeachers() {
 
-    if (!container) return;
+    const directorContainer =
+        document.getElementById('directorsInformationContainer');
 
-    container.innerHTML = '';
+    const teacherContainer =
+        document.getElementById('teachersInformationContainer');
 
-    const teachers = getRegisteredTeachers();
+    if (!teacherContainer) return;
 
-    if (teachers.length === 0) {
-        container.innerHTML = `
+    /*
+     * ============================================================
+     * DIRECTOR INFORMATION
+     * ============================================================
+     */
+
+    if (directorContainer) {
+
+        directorContainer.innerHTML = '';
+
+        const token =
+            localStorage.getItem('LS_ACCESS_TOKEN');
+
+        if (token) {
+
+            try {
+
+                const response = await fetch(
+                    `http://127.0.0.1:8000/auth/directors?token=${encodeURIComponent(token)}`
+                );
+
+                const data = await response.json();
+
+                const directors = data.directors || [];
+
+                if (directors.length === 0) {
+
+                    directorContainer.innerHTML = `
+                        <p class="text-center text-gray-500 text-sm">
+                            কোনো পরিচালক নিবন্ধিত নেই।
+                        </p>
+                    `;
+
+                } else {
+
+                    directors.forEach(d => {
+
+                        const card =
+                            document.createElement('div');
+
+                        card.className =
+                            "w-full bg-white border border-gray-300 rounded-xl shadow-md p-5 flex flex-col md:flex-row items-center gap-6";
+
+                        card.innerHTML = `
+                            <div class="w-full md:w-1/3 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-gray-200 pb-4 md:pb-0 md:pr-6">
+
+                                ${
+                                    d.profile_pic
+                                    ? `
+                                        <img
+                                            src="${d.profile_pic}"
+                                            alt="Profile"
+                                            style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover;"
+                                            class="border-2 border-blue-900 shadow"
+                                        >
+                                    `
+                                    : `
+                                        <div
+                                            style="
+                                                width: 100px;
+                                                height: 100px;
+                                                border-radius: 50%;
+                                                display: flex;
+                                                align-items: center;
+                                                justify-content: center;
+                                                background: #1e3a8a;
+                                                color: white;
+                                                font-size: 32px;
+                                                font-weight: bold;
+                                            "
+                                        >
+                                            ${(
+                                                d.first_name || 'D'
+                                            ).charAt(0).toUpperCase()}
+                                        </div>
+                                    `
+                                }
+
+                            </div>
+
+                            <div class="w-full md:w-2/3 flex flex-col justify-center space-y-3">
+
+                                <div class="space-y-1">
+
+                                    <h3 class="text-lg font-bold text-blue-900">
+                                        ${d.first_name || ''} ${d.last_name || ''}
+                                    </h3>
+
+                                    <p class="text-xs text-gray-600">
+                                        <strong>Director ID:</strong>
+                                        ${d.director_id || ''}
+                                    </p>
+
+                                    <p class="text-xs text-gray-700">
+                                        <strong>পদবি:</strong>
+                                        পরিচালক (Director)
+                                    </p>
+
+                                </div>
+
+                                <hr class="border-gray-200 my-1">
+
+                                <div>
+
+                                    <p class="text-[11px] text-gray-500 mb-1 font-bold">
+                                        সিগনেচার:
+                                    </p>
+
+                                    ${
+                                        d.signature
+                                        ? `
+                                            <img
+                                                src="${d.signature}"
+                                                alt="Signature"
+                                                style="height: 20px; width: 50px; object-fit: contain;"
+                                                class="border border-gray-200 bg-gray-50 p-0.5"
+                                            >
+                                        `
+                                        : `
+                                            <span class="text-xs text-gray-400">
+                                                সিগনেচার নেই
+                                            </span>
+                                        `
+                                    }
+
+                                </div>
+
+                                <hr class="border-gray-200 my-1">
+
+                                <div class="flex justify-start">
+
+                                    <button
+                                        type="button"
+                                        onclick="openRemoveDirectorModal('${d.director_id || ''}')"
+                                        class="bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-red-700 transition"
+                                    >
+                                        পরিচালক রিমুভ
+                                    </button>
+
+                                </div>
+
+                            </div>
+                        `;
+
+                        directorContainer.appendChild(card);
+                    });
+                }
+
+            } catch (error) {
+
+                console.error(
+                    'Director information loading error:',
+                    error
+                );
+
+                directorContainer.innerHTML = `
+                    <p class="text-center text-red-500 text-sm">
+                        পরিচালকের তথ্য লোড করা যাচ্ছে না।
+                    </p>
+                `;
+            }
+
+        } else {
+
+            directorContainer.innerHTML = `
+                <p class="text-center text-gray-500 text-sm">
+                    Director information দেখতে Login করুন।
+                </p>
+            `;
+        }
+    }
+
+
+    /*
+     * ============================================================
+     * TEACHER INFORMATION
+     * ============================================================
+     */
+
+    teacherContainer.innerHTML = '';
+
+    const token =
+        localStorage.getItem('LS_ACCESS_TOKEN');
+
+    if (!token) {
+
+        teacherContainer.innerHTML = `
             <p class="text-center text-gray-500 text-sm">
-                কোনো শিক্ষক নিবন্ধিত নেই।
+                Teacher information দেখতে Login করুন।
             </p>
         `;
+
         return;
     }
 
-    teachers.forEach(t => {
+    try {
 
-        let desigText = '';
+        const response = await fetch(
+            `http://127.0.0.1:8000/auth/teachers?token=${encodeURIComponent(token)}`
+        );
 
-        if (t.designation === 'head_teacher') {
-            desigText = 'প্রধান শিক্ষক (Head Teacher)';
-        } else if (t.designation === 'assistant_teacher') {
-            desigText = 'সহকারী শিক্ষক (Assistant Teacher)';
-        } else if (t.designation === 'class_teacher') {
-            desigText = `শ্রেণি শিক্ষক (Class Teacher) (${t.className || ''})`;
-        } else {
-            desigText = t.designation || '';
+        const data = await response.json();
+
+        const teachers = data.teachers || [];
+
+        if (teachers.length === 0) {
+
+            teacherContainer.innerHTML = `
+                <p class="text-center text-gray-500 text-sm">
+                    কোনো শিক্ষক নিবন্ধিত নেই।
+                </p>
+            `;
+
+            return;
         }
 
-        const card = document.createElement('div');
+        teachers.forEach(t => {
 
-        card.className =
-            "w-full bg-white border border-gray-300 rounded-xl shadow-md p-5 flex flex-col md:flex-row items-center gap-6";
+            let desigText = '';
 
-        card.innerHTML = `
-            <div class="w-full md:w-1/3 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-gray-200 pb-4 md:pb-0 md:pr-6">
+            if (t.designation === 'head_teacher') {
 
-                <img
-                    src="${t.profilePic || 'https://via.placeholder.com/100'}"
-                    alt="Profile"
-                    style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover;"
-                    class="border-2 border-blue-900 shadow"
-                >
+                desigText =
+                    'প্রধান শিক্ষক (Head Teacher)';
 
-            </div>
+            } else if (t.designation === 'assistant_teacher') {
 
-            <div class="w-full md:w-2/3 flex flex-col justify-center space-y-2">
+                desigText =
+                    'সহকারী শিক্ষক (Assistant Teacher)';
 
-                <div class="space-y-1">
+            } else if (t.designation === 'class_teacher') {
 
-                    <h3 class="text-lg font-bold text-blue-900">
-                        ${t.firstName || ''} ${t.lastName || ''}
-                    </h3>
+                desigText =
+                    'শ্রেণি শিক্ষক (Class Teacher)';
 
-                    <p class="text-xs text-gray-600">
-                        <strong>Teacher ID:</strong> ${t.teacherId || ''}
-                    </p>
+            } else {
 
-                    <p class="text-xs text-gray-700">
-                        <strong>পদবি:</strong> ${desigText}
-                    </p>
+                desigText =
+                    t.designation || '';
+            }
+
+            const card =
+                document.createElement('div');
+
+            card.className =
+                "w-full bg-white border border-gray-300 rounded-xl shadow-md p-5 flex flex-col md:flex-row items-center gap-6";
+
+            card.innerHTML = `
+                <div class="w-full md:w-1/3 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-gray-200 pb-4 md:pb-0 md:pr-6">
+
+                    ${
+                        t.profile_pic
+                        ? `
+                            <img
+                                src="${t.profile_pic}"
+                                alt="Profile"
+                                style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover;"
+                                class="border-2 border-blue-900 shadow"
+                            >
+                        `
+                        : `
+                            <div
+                                style="
+                                    width: 100px;
+                                    height: 100px;
+                                    border-radius: 50%;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    background: #1e3a8a;
+                                    color: white;
+                                    font-size: 32px;
+                                    font-weight: bold;
+                                "
+                            >
+                                ${(
+                                    t.first_name || 'T'
+                                ).charAt(0).toUpperCase()}
+                            </div>
+                        `
+                    }
 
                 </div>
 
-                <hr class="border-gray-200 my-1">
+                <div class="w-full md:w-2/3 flex flex-col justify-center space-y-2">
 
-                <div>
+                    <div class="space-y-1">
 
-                    <p class="text-[11px] text-gray-500 mb-1 font-bold">
-                        সিগনেচার:
-                    </p>
+                        <h3 class="text-lg font-bold text-blue-900">
+                            ${t.first_name || ''} ${t.last_name || ''}
+                        </h3>
 
-                    <img
-                        src="${t.signature || ''}"
-                        alt="Signature"
-                        style="height: 20px; width: 50px; object-fit: contain;"
-                        class="border border-gray-200 bg-gray-50 p-0.5"
-                    >
+                        <p class="text-xs text-gray-600">
+                            <strong>Teacher ID:</strong>
+                            ${t.teacher_id || ''}
+                        </p>
+
+                        <p class="text-xs text-gray-700">
+                            <strong>পদবি:</strong>
+                            ${desigText}
+                        </p>
+
+                    </div>
+
+                    <hr class="border-gray-200 my-1">
+
+                    <div>
+
+                        <p class="text-[11px] text-gray-500 mb-1 font-bold">
+                            সিগনেচার:
+                        </p>
+
+                        ${
+                            t.signature
+                            ? `
+                                <img
+                                    src="${t.signature}"
+                                    alt="Signature"
+                                    style="height: 20px; width: 50px; object-fit: contain;"
+                                    class="border border-gray-200 bg-gray-50 p-0.5"
+                                >
+                            `
+                            : `
+                                <span class="text-xs text-gray-400">
+                                    সিগনেচার নেই
+                                </span>
+                            `
+                        }
+
+                    </div>
 
                 </div>
+            `;
 
-            </div>
+            teacherContainer.appendChild(card);
+        });
+
+    } catch (error) {
+
+        console.error(
+            'Teacher information loading error:',
+            error
+        );
+
+        teacherContainer.innerHTML = `
+            <p class="text-center text-red-500 text-sm">
+                শিক্ষকদের তথ্য লোড করা যাচ্ছে না।
+            </p>
         `;
+    }
 
-        container.appendChild(card);
-    });
 }
 
 
@@ -1944,6 +2513,32 @@ function openRemoveTeacherModal() {
     if (teacherIdInput) {
         teacherIdInput.value = '';
         teacherIdInput.focus();
+    }
+
+    if (passwordInput) {
+        passwordInput.value = '';
+        passwordInput.type = 'password';
+    }
+}
+
+
+function openRemoveDirectorModal(directorId = '') {
+    const modal =
+        document.getElementById('removeDirectorModal');
+
+    if (!modal) return;
+
+    modal.classList.remove('hidden');
+
+    const directorIdInput =
+        document.getElementById('removeDirectorId');
+
+    const passwordInput =
+        document.getElementById('removeDirectorPassword');
+
+    if (directorIdInput) {
+        directorIdInput.value = directorId || '';
+        directorIdInput.focus();
     }
 
     if (passwordInput) {
@@ -1977,11 +2572,36 @@ function closeRemoveTeacherModal() {
 }
 
 
+function closeRemoveDirectorModal() {
+    const modal =
+        document.getElementById('removeDirectorModal');
+
+    if (!modal) return;
+
+    modal.classList.add('hidden');
+
+    const directorIdInput =
+        document.getElementById('removeDirectorId');
+
+    const passwordInput =
+        document.getElementById('removeDirectorPassword');
+
+    if (directorIdInput) {
+        directorIdInput.value = '';
+    }
+
+    if (passwordInput) {
+        passwordInput.value = '';
+        passwordInput.type = 'password';
+    }
+}
+
+
 // ==========================================
 // REMOVE TEACHER ACCOUNT
 // ==========================================
 
-function removeTeacherAccount() {
+async function removeTeacherAccount() {
 
     const teacherIdInput =
         document.getElementById('removeTeacherId');
@@ -2012,235 +2632,165 @@ function removeTeacherAccount() {
         return;
     }
 
+    const token =
+        localStorage.getItem('LS_ACCESS_TOKEN');
 
-    // ==========================================
-    // 1. TEACHER ACCOUNT খোঁজা
-    // ==========================================
-
-    const storedTeacher =
-        localStorage.getItem(teacherId);
-
-    if (!storedTeacher) {
-        alert('এই Teacher ID-এর কোনো account পাওয়া যায়নি।');
+    if (!token) {
+        alert('Login session পাওয়া যাচ্ছে না। অনুগ্রহ করে আবার Login করুন।');
         return;
     }
-
-
-    let teacherData;
 
     try {
 
-        teacherData =
-            JSON.parse(storedTeacher);
-
-    } catch (error) {
-
-        console.error(
-            'Teacher data parse error:',
-            error
-        );
-
-        alert(
-            'Teacher data সঠিকভাবে পড়া যাচ্ছে না।'
-        );
-
-        return;
-    }
-
-
-    // ==========================================
-    // 2. PASSWORD VERIFY
-    // ==========================================
-
-    if (
-        teacherData.password !== password
-    ) {
-
-        alert(
-            'Teacher ID অথবা Password সঠিক নয়। কোনো Teacher remove করা হয়নি।'
-        );
-
-        return;
-    }
-
-
-    // ==========================================
-    // 3. REGISTERED TEACHER LIST থেকে ID বাদ
-    // ==========================================
-
-    let registeredIds = [];
-
-    const rawRegisteredTeachers =
-        localStorage.getItem(
-            'LS_REGISTERED_TEACHERS'
-        );
-
-    if (rawRegisteredTeachers) {
-
-        try {
-
-            const parsedList =
-                JSON.parse(
-                    rawRegisteredTeachers
-                );
-
-            if (Array.isArray(parsedList)) {
-
-                registeredIds =
-                    parsedList
-                        .map(item => {
-
-                            if (
-                                typeof item === 'string'
-                            ) {
-                                return item;
-                            }
-
-                            if (
-                                item &&
-                                typeof item === 'object' &&
-                                item.teacherId
-                            ) {
-                                return item.teacherId;
-                            }
-
-                            return null;
-                        })
-                        .filter(Boolean);
-
+        const response = await fetch(
+            `http://127.0.0.1:8000/auth/remove-teacher?token=${encodeURIComponent(token)}`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    teacher_id: teacherId,
+                    password: password
+                })
             }
+        );
 
-        } catch (error) {
+        const data =
+            await response.json();
 
-            console.error(
-                'Registered teacher list parse error:',
-                error
+        if (!response.ok) {
+            alert(
+                data.detail ||
+                data.message ||
+                'Teacher removal request পাঠানো যায়নি।'
             );
+            return;
+        }
+
+        if (
+            data.message ===
+            'Teacher removal request sent to Admin!'
+        ) {
+
+            closeRemoveTeacherModal();
 
             alert(
-                'Registered Teacher list সঠিকভাবে পড়া যাচ্ছে না। কোনো Teacher remove করা হয়নি।'
+                `Teacher "${teacherId}"-এর Remove Request Admin-এর কাছে পাঠানো হয়েছে। Admin approve করার পর Teacher Remove হবে।`
             );
 
             return;
         }
-    }
 
-
-    // ==========================================
-    // 4. ID LIST থেকে TEACHER বাদ
-    // ==========================================
-
-    const updatedRegisteredIds =
-        registeredIds.filter(
-            id => id !== teacherId
+        alert(
+            data.message ||
+            'Teacher removal request সম্পন্ন হয়েছে।'
         );
 
+    } catch (error) {
 
-    // ==========================================
-    // 5. TEACHER ACCOUNT DATA DELETE
-    // ==========================================
-
-    localStorage.removeItem(
-        teacherId
-    );
-
-
-    // ==========================================
-    // 6. UPDATED TEACHER ID LIST SAVE
-    // ==========================================
-
-    localStorage.setItem(
-        'LS_REGISTERED_TEACHERS',
-        JSON.stringify(
-            updatedRegisteredIds
-        )
-    );
-
-
-    // ==========================================
-    // 7. CURRENT LOGIN SESSION CHECK
-    // ==========================================
-
-    const loggedInUserRaw =
-        localStorage.getItem(
-            'LS_LOGGED_IN_USER'
+        console.error(
+            'Teacher removal error:',
+            error
         );
 
-    let loggedInUser = null;
-
-    if (loggedInUserRaw) {
-
-        try {
-
-            loggedInUser =
-                JSON.parse(
-                    loggedInUserRaw
-                );
-
-        } catch (error) {
-
-            console.error(
-                'Logged-in teacher data parse error:',
-                error
-            );
-
-        }
-    }
-
-
-    // যদি remove করা Teacher-ই বর্তমানে login করা থাকে,
-    // তার login session-ও সম্পূর্ণভাবে remove হবে।
-
-    if (
-        loggedInUser &&
-        loggedInUser.teacherId === teacherId
-    ) {
-
-        localStorage.removeItem(
-            'LS_LOGGED_IN_USER'
+        alert(
+            'Backend-এর সাথে সংযোগ করা যাচ্ছে না।'
         );
-
-    }
-
-
-    // ==========================================
-    // 8. MODAL CLOSE
-    // ==========================================
-
-    closeRemoveTeacherModal();
-
-
-    // ==========================================
-    // 9. TEACHER INFORMATION REFRESH
-    // ==========================================
-
-    renderInformationTeachers();
-
-
-    // ==========================================
-    // 10. SUCCESS MESSAGE
-    // ==========================================
-
-    alert(
-        `Teacher "${teacherId}" সফলভাবে Remove করা হয়েছে।`
-    );
-
-
-    // ==========================================
-    // 11. CURRENT USER যদি নিজেই REMOVE হয়
-    // ==========================================
-
-    if (
-        loggedInUser &&
-        loggedInUser.teacherId === teacherId
-    ) {
-
-        window.location.href =
-            'logging.html';
-
     }
 }
 
+
+function removeDirectorAccount() {
+
+    const directorIdInput =
+        document.getElementById('removeDirectorId');
+
+    const passwordInput =
+        document.getElementById('removeDirectorPassword');
+
+    if (!directorIdInput || !passwordInput) {
+        alert('Director removal form পাওয়া যাচ্ছে না।');
+        return;
+    }
+
+    const directorId =
+        directorIdInput.value.trim();
+
+    const password =
+        passwordInput.value;
+
+    if (!directorId) {
+        alert('অনুগ্রহ করে Director ID লিখুন।');
+        directorIdInput.focus();
+        return;
+    }
+
+    if (!password) {
+        alert('অনুগ্রহ করে Director Password লিখুন।');
+        passwordInput.focus();
+        return;
+    }
+
+    const token =
+        localStorage.getItem('LS_ACCESS_TOKEN');
+
+    if (!token) {
+        alert('Login session পাওয়া যাচ্ছে না। আবার Login করুন।');
+        return;
+    }
+
+    fetch(
+        `http://127.0.0.1:8000/auth/remove-director?token=${encodeURIComponent(token)}`,
+        {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                director_id: directorId,
+                password: password
+            })
+        }
+    )
+    .then(async response => {
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail ||
+                data.message ||
+                'Director removal request failed.'
+            );
+        }
+
+        return data;
+    })
+    .then(data => {
+
+        closeRemoveDirectorModal();
+
+        alert(
+            data.message ||
+            'Director removal request Admin-এর কাছে পাঠানো হয়েছে।'
+        );
+
+    })
+    .catch(error => {
+
+        console.error(
+            'Director removal error:',
+            error
+        );
+
+        alert(
+            error.message ||
+            'Director removal request পাঠানো যায়নি।'
+        );
+
+    });
+}
 
 // ==========================================
 // 4. RECEIPT SIGNATURE DROPDOWN & SELECTOR
@@ -4529,3 +5079,48 @@ function searchOldVouchersByDate() {
     });
 
 }
+
+
+
+// ==========================================
+// ADMIN — APPROVAL MENU VISIBILITY
+// ==========================================
+
+function updateApprovalMenuVisibility() {
+
+    const approvalButton =
+        document.getElementById('approvalMenuButton');
+
+    if (!approvalButton) return;
+
+    const userRaw =
+        localStorage.getItem('LS_LOGGED_IN_USER');
+
+    if (!userRaw) {
+        approvalButton.style.display = 'none';
+        return;
+    }
+
+    try {
+
+        const user =
+            JSON.parse(userRaw);
+
+        if (user.is_admin === true) {
+            approvalButton.style.display = '';
+        } else {
+            approvalButton.style.display = 'none';
+        }
+
+    } catch (error) {
+
+        console.error(
+            'Admin status check error:',
+            error
+        );
+
+        approvalButton.style.display = 'none';
+    }
+}
+
+updateApprovalMenuVisibility();
